@@ -64,7 +64,7 @@ Your app uses this API to connect accounts on your behalf.
    - Under **Permissions**, turn on **Offline Access** and leave `gmail.readonly` off, so sign-in only asks for an email and profile. The app requests Gmail access when you click **Connect Gmail**.
 5. On the connection's **Applications** tab, turn on your application.
 
-This flow hasn't been run end to end against a real Google account yet. If Auth0 refuses the Gmail request, turn `gmail.readonly` on for the connection. Every Google sign-in then asks for inbox access too, so only test users can sign in.
+Reading Gmail has been run end to end with a real Google account. If Auth0 refuses the Gmail request in your setup, turn `gmail.readonly` on for the connection. Every Google sign-in then asks for inbox access too, so only test users can sign in.
 
 Google shows an "unverified app" warning for test apps. `gmail.readonly` is a restricted scope, so opening this to the public requires Google's verification and a security assessment.
 

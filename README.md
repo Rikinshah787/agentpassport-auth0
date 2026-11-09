@@ -4,7 +4,7 @@ Control what each AI agent on your machine can do, from one panel. Auth0 handles
 
 ![The Agent Passport panel, showing one agent's permissions and a live feed of allowed and refused calls](docs/panel.png)
 
-> **Status:** a local, single-user prototype. The GitHub flow has been run end to end against real Auth0 and GitHub. The Gmail flow is implemented and covered by tests, but hasn't yet been run against a real Google account.
+> **Status:** a local, single-user prototype. The GitHub and Gmail flows have both been run end to end against real Auth0, GitHub and Google accounts.
 
 ## The problem
 
@@ -28,7 +28,7 @@ For every tool call, the panel:
 3. **Checks the scope** is on that agent's passport and in your Auth0 token.
 4. **Fetches an app token from Token Vault** and calls the real API, only if everything passed.
 
-A refused call returns a `403` and never contacts the app. The app token stays in the panel and is never sent to the agent.
+A refused call returns a `401` or `403` and never contacts the app. The app token stays in the panel and is never sent to the agent.
 
 ## What it can do
 
@@ -37,7 +37,7 @@ A refused call returns a `403` and never contacts the app. The app token stays i
 | `github_list_repos` | `github:read` | Your 10 most recently updated repos |
 | `gmail_list_messages` | `gmail:read` | Sender and subject of your 5 latest emails, never the body |
 
-**One-click passports:** the panel looks for known MCP clients (Claude Code, Claude Desktop, VS Code, Cursor, Windsurf and Codex), gives each its own key, and adds Agent Passport to its config. It backs up any existing config first, leaves your other settings alone, and refuses to touch a config it can't parse.
+**One-click passports:** the panel looks for known MCP clients (Claude Code, Claude Desktop, VS Code, Cursor, Windsurf and Codex), gives each its own key, and adds Agent Passport to its config. It backs up any existing config first, leaves your other settings alone, and refuses to touch a config it can't parse. Click **Rescan for agents** later to pick up new agents. Agents that already have a passport keep their key and scopes.
 
 ## Quick start
 
@@ -63,7 +63,7 @@ To undo things later:
 
 - **Switch off a scope** to stop one agent using an app, on its next call.
 - **× on a connected app** removes it from Token Vault and cuts it off for every agent.
-- **Remove agent** deletes its passport and takes Agent Passport out of its config.
+- **Remove agent** deletes its passport, so its key stops working at once, and takes Agent Passport out of its config. **Rescan for agents** brings back any removed agent it finds, with a new key and only `github:read`.
 - **Log out** ends your panel and Auth0 sessions. Connected apps stay connected until you remove them.
 
 ## Security model
@@ -82,7 +82,7 @@ To undo things later:
 - **Local keys aren't strong identity.** Anything running as your user could read `passports.json`.
 - **Removing access doesn't revoke a token already issued.** The passport check applies on the next call, but the Auth0 token stays valid until it expires.
 - **Passports live in this app, not in Auth0.** A production version would move agent identity to [Agent as Principal](https://auth0.com/docs/ai-agents-mcp/agent-as-principal) and the rules to Auth0 FGA.
-- **Detection only finds known clients.** Custom agents won't appear, and "running" is a best guess from process names.
+- **Detection only finds known clients.** Custom agents won't appear, Claude Desktop and VS Code are only found at their macOS config paths, and "running" is a best guess from process names.
 
 The setup also turns off refresh token rotation and the My Account API's 2FA policy, because this flow needs them off. Keep the 2FA policy on in production, with a step-up prompt when someone connects an account.
 
