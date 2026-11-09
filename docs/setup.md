@@ -58,11 +58,13 @@ Your app uses this API to connect accounts on your behalf.
 1. In Google Cloud, enable the **Gmail API**.
 2. In the **Google Auth Platform**, set the audience to **External** and add your address as a **Test user**.
 3. Create a **Web application** client, with the redirect URI `https://YOUR_TENANT/login/callback`.
-4. In Auth0, go to **Authentication → Social → Create Connection → Google**:
-   - Name it exactly `gmail`. If you already use `google-oauth2` for login, leave that one alone.
-   - Set **Purpose** to **Connected Accounts for Token Vault**.
-   - Under **Permissions**, turn on **Offline Access** and add `https://www.googleapis.com/auth/gmail.readonly`.
+4. In Auth0, open **Authentication → Social → google-oauth2**. This one connection handles both Google sign-in and Gmail:
+   - Paste in your Client ID and Client Secret.
+   - Under **Purpose**, turn on both **Authentication** and **Connected Accounts for Token Vault**.
+   - Under **Permissions**, turn on **Offline Access** and leave `gmail.readonly` off, so sign-in only asks for an email and profile. The app requests Gmail access when you click **Connect Gmail**.
 5. On the connection's **Applications** tab, turn on your application.
+
+This flow hasn't been run end to end against a real Google account yet. If Auth0 refuses the Gmail request, turn `gmail.readonly` on for the connection. Every Google sign-in then asks for inbox access too, so only test users can sign in.
 
 Google shows an "unverified app" warning for test apps. `gmail.readonly` is a restricted scope, so opening this to the public requires Google's verification and a security assessment.
 

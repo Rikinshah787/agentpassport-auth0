@@ -59,6 +59,13 @@ Open `http://localhost:5000`, then follow the three steps on the panel:
 2. Connect your apps.
 3. Click **Find local agents & issue passports**, then restart each app so it loads its passport.
 
+To undo things later:
+
+- **Switch off a scope** to stop one agent using an app, on its next call.
+- **× on a connected app** removes it from Token Vault and cuts it off for every agent.
+- **Remove agent** deletes its passport and takes Agent Passport out of its config.
+- **Log out** ends your panel and Auth0 sessions. Connected apps stay connected until you remove them.
+
 ## Security model
 
 **What it protects**
