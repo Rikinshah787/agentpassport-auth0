@@ -1,0 +1,616 @@
+:root {
+  color-scheme: light;
+
+  --desk: #11141a;
+  --paper-warm: #f6f2e8;
+  --paper-cool: #e6efe8;
+  --paper-zone: #fbf9f3;
+  --ink: #1a1d24;
+  --ink-soft: #4d5159;
+  --rule: rgb(26 29 36 / 0.16);
+  --foil: #7a5f24;
+  --allowed: #11683a;
+  --blocked: #a8221b;
+  --focus: #1c5fd0;
+
+  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 32px);
+  background: radial-gradient(120% 90% at 50% 0%, #1f2530 0%, var(--desk) 62%);
+  color: var(--ink);
+  font: 400 15px/1.45 var(--sans);
+}
+
+h1, h2, h3, p, dl, dd, ul { margin: 0; padding: 0; }
+ul { list-style: none; }
+code { font-family: var(--mono); }
+
+
+/* The open document */
+
+.passport {
+  position: relative;
+  width: min(100%, 1040px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "holder" "clearances" "editor" "zone";
+  overflow: hidden;
+  border-radius: 14px;
+  background-color: var(--paper-warm);
+  /* Two overlapping ring fields make the fine-line security print. */
+  background-image:
+    repeating-radial-gradient(circle at 8% 12%, transparent 0 11px, rgb(30 80 70 / 0.05) 11px 12px),
+    repeating-radial-gradient(circle at 92% 70%, transparent 0 11px, rgb(120 90 30 / 0.05) 11px 12px);
+  box-shadow:
+    0 30px 60px -20px rgb(0 0 0 / 0.65),
+    0 8px 20px rgb(0 0 0 / 0.3);
+  animation: open 420ms ease-out both;
+}
+
+.holder, .editor { background-color: rgb(230 239 232 / 0.8); }
+.holder  { grid-area: holder;     padding: 24px 24px 20px; }
+.clearances { grid-area: clearances; padding: 24px; }
+.editor  { grid-area: editor;     padding: 20px 24px 24px; }
+.zone    { grid-area: zone; }
+
+@media (min-width: 860px) {
+  .passport {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "holder clearances"
+      "editor clearances"
+      "zone   zone";
+    background-image:
+      repeating-radial-gradient(circle at 8% 12%, transparent 0 11px, rgb(30 80 70 / 0.05) 11px 12px),
+      repeating-radial-gradient(circle at 92% 70%, transparent 0 11px, rgb(120 90 30 / 0.05) 11px 12px),
+      linear-gradient(90deg, var(--paper-cool) 50%, var(--paper-warm) 50%);
+  }
+
+  .holder, .editor { background-color: transparent; }
+  .holder { padding: 32px 40px 20px 32px; }
+  .editor { padding: 16px 40px 28px 32px; align-self: end; }
+  .clearances { padding: 32px 32px 28px 40px; }
+
+  /* The fold down the middle of the book. */
+  .passport::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 56px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, transparent, rgb(20 25 30 / 0.11) 50%, transparent);
+    pointer-events: none;
+  }
+}
+
+
+/* Holder page */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.seal { flex: none; width: 52px; height: 52px; color: var(--foil); }
+
+h1 {
+  font: 600 22px/1.15 var(--serif);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.powered { margin-top: 3px; color: var(--ink-soft); font-size: 13px; }
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  padding-top: 16px;
+}
+
+dt {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+dd { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+
+.void {
+  --tilt: -5deg;
+  width: fit-content;
+  margin: 28px auto 8px;
+  padding: 10px 22px;
+  border: 4px double var(--blocked);
+  border-radius: 10px;
+  color: var(--blocked);
+  font: 700 clamp(22px, 3.2vw, 30px)/1.1 var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(var(--tilt));
+  animation: stamp 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 760ms;
+}
+
+
+/* Clearances page */
+
+.clearances-head { margin-bottom: 4px; }
+
+h2 {
+  font: 600 19px/1.25 var(--serif);
+  text-wrap: balance;
+}
+
+.tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.tally b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.tally-allowed b { color: var(--allowed); }
+.tally-blocked b { color: var(--blocked); }
+
+.notice {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-left: 3px solid var(--ink-soft);
+  background: rgb(26 29 36 / 0.05);
+  font-size: 14px;
+  text-wrap: pretty;
+}
+
+.notice-error { border-left-color: var(--blocked); }
+
+h3 {
+  margin-top: 14px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font: 600 11px/1.3 var(--sans);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-height: 48px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgb(26 29 36 / 0.07);
+}
+
+.rows .row:last-child { border-bottom: 0; }
+
+.row-text { flex: 1 1 9rem; min-width: 0; }
+.row-label { display: block; font-weight: 600; line-height: 1.25; }
+.row-scope { color: var(--ink-soft); font-size: 12.5px; }
+/* Rubber stamps: outline, dashed and solid, so state never relies on colour. */
+
+.stamp {
+  --tilt: -1.4deg;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 10.75rem;
+  padding: 6px 10px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  font: 700 12px/1.2 var(--mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transform: rotate(var(--tilt));
+  animation: stamp 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 70ms + 220ms);
+}
+
+.row:nth-child(2) .stamp { --tilt: 1.1deg; }
+.row:nth-child(3) .stamp { --tilt: -0.6deg; }
+
+.stamp-icon { flex: none; width: 13px; height: 13px; }
+
+.stamp-allowed {
+  color: var(--allowed);
+  background: rgb(17 104 58 / 0.07);
+}
+
+.stamp-blocked {
+  color: #fff;
+  border-color: var(--blocked);
+  background: var(--blocked);
+}
+
+
+/* Scope editor */
+
+.toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0 20px;
+  margin-top: 6px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.toggle code { font-size: 13px; overflow-wrap: anywhere; }
+
+.toggle input {
+  flex: none;
+  appearance: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: #6f737b;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.toggle input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  transition: transform 150ms ease-out;
+}
+
+.toggle input:checked { background: var(--allowed); }
+.toggle input:checked::after { transform: translateX(16px); }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: 600 14px/1 var(--sans);
+  text-decoration: none;
+  cursor: pointer;
+  transition-property: transform, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-primary { flex: 1 1 auto; background: var(--ink); color: #fff; }
+.btn-primary:hover { background: #2f343f; }
+
+.btn-revoke { border-color: var(--blocked); background: transparent; color: var(--blocked); }
+.btn-revoke:hover { background: rgb(168 34 27 / 0.09); }
+
+.btn:focus-visible,
+.toggle input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+
+/* Machine-readable zone: printed from the real scope string. */
+
+.zone {
+  position: relative;
+  padding: 12px 24px 14px;
+  border-top: 1px solid var(--rule);
+  background: var(--paper-zone);
+}
+
+@media (min-width: 860px) {
+  .zone { padding: 12px 32px 16px; }
+}
+
+.claim { font-size: 13px; overflow-wrap: anywhere; }
+.claim-label { margin-right: 8px; color: var(--ink-soft); font-weight: 600; }
+.claim code { font-size: 12.5px; }
+.claim-empty { color: var(--ink-soft); font-style: italic; }
+
+.mrz {
+  margin-top: 8px;
+  overflow: hidden;
+  color: var(--ink);
+  font: 500 14px/1.5 var(--mono);
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+
+/* Phones: keep each stamp on the same line as its label. */
+
+@media (max-width: 480px) {
+  .holder { padding: 20px 16px 18px; }
+  .clearances { padding: 20px 16px; }
+  .editor { padding: 18px 16px 20px; }
+  .zone { padding: 12px 16px 14px; }
+
+  .fields .wide { grid-column: 1 / -1; }
+
+  .row { flex-wrap: nowrap; gap: 8px; }
+  .row-text { flex: 1 1 auto; }
+  .stamp {
+    min-width: 9rem;
+    padding: 5px 6px;
+    gap: 4px;
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+  }
+}
+
+
+/* One-shot entrances */
+
+@keyframes open {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes stamp {
+  0%   { opacity: 0; transform: rotate(calc(var(--tilt) - 7deg)) scale(1.55); }
+  65%  { opacity: 1; transform: rotate(var(--tilt)) scale(0.96); }
+  100% { opacity: 1; transform: rotate(var(--tilt)) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .passport, .stamp, .void { animation: none; }
+  .btn, .toggle input, .toggle input::after { transition: none; }
+  .btn:active { transform: none; }
+}
+
+
+/* Agent switcher */
+
+.agents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 14px;
+}
+
+.agents a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 150ms ease-out;
+}
+
+.agents a:hover { background: rgb(26 29 36 / 0.07); }
+.agents a[aria-current="page"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+
+
+/* Try button and the server's answer */
+
+.agents a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.result {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-left: 3px solid currentColor;
+  font-size: 14px;
+  text-wrap: pretty;
+}
+
+.result b { margin-right: 4px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.result-ok { background: rgb(17 104 58 / 0.09); color: #0d5730; }
+.result-no { background: rgb(168 34 27 / 0.09); color: #8f1c16; }
+
+/* After Try, keep the card still so the answer is what you notice. */
+.quiet .passport, .quiet .stamp { animation: none; }
+
+@media (max-width: 480px) {
+  .row { flex-wrap: wrap; }
+  .row-text { flex: 1 1 100%; }
+  }
+
+@media (prefers-reduced-motion: reduce) {
+  .agents a, }
+
+
+/* Live activity feed */
+
+.editor-title { margin-top: 14px; }
+
+.activity { margin-top: 6px; font-size: 13px; }
+
+.activity li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  border-bottom: 1px solid rgb(26 29 36 / 0.07);
+}
+
+.activity time { flex: none; color: var(--ink-soft); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+.activity-who { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.activity-code { flex: none; font: 700 12px var(--mono); }
+.activity-ok { color: var(--allowed); }
+.activity-no { color: var(--blocked); }
+.activity-empty { color: var(--ink-soft); font-style: italic; }
+
+
+/* Connect GitHub link */
+
+/* One-click issue button */
+
+.btn-issue { width: 100%; border-color: var(--ink); background: transparent; color: var(--ink); }
+.btn-issue:hover { background: rgb(26 29 36 / 0.07); }
+
+
+/* Keep the whole card on one screen for the demo. */
+
+@media (min-width: 860px) {
+  body { padding-block: 12px; }
+  .toggles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 14px; }
+  .toggle code { font-size: 12px; }
+  .holder { padding-top: 22px; padding-bottom: 12px; }
+  .editor { padding-top: 8px; padding-bottom: 18px; }
+  .clearances { padding-top: 22px; padding-bottom: 16px; }
+  .fields { gap: 8px 20px; padding-top: 12px; }
+  .masthead { padding-bottom: 12px; }
+}
+
+
+/* Setup steps */
+
+.steps { margin: 12px 0 0; padding: 0; list-style: none; }
+
+.step {
+  display: flex;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgb(26 29 36 / 0.08);
+}
+
+.step:last-child { border-bottom: 0; }
+
+.step-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 50%;
+  color: var(--ink-soft);
+  font: 700 11px/1 var(--sans);
+}
+
+.step.active .step-mark { border-color: var(--ink); background: var(--ink); color: #fff; }
+.step.done .step-mark { border-color: var(--allowed); background: var(--allowed); color: #fff; }
+.step.todo { color: var(--ink-soft); }
+
+.step-body { flex: 1; min-width: 0; font-size: 14px; }
+.step-body b { display: block; font-weight: 600; line-height: 24px; }
+.step-note { display: block; color: var(--ink-soft); font-size: 13px; overflow-wrap: anywhere; }
+.step-body form { margin: 4px 0 3px; }
+.step-body .btn { width: 100%; min-height: 40px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chip-on { border-color: var(--allowed); background: rgb(17 104 58 / 0.09); color: var(--allowed); }
+.chip-off { color: var(--ink-soft); }
+.chip-link {
+  border-color: var(--ink);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 150ms ease-out;
+}
+.chip-link:hover { background: rgb(26 29 36 / 0.07); }
+.chip-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+
+/* Running indicator on agent tabs */
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #1f9d57;
+  box-shadow: 0 0 0 2px rgb(31 157 87 / 0.25);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.claim-next { margin-left: 14px; }
+.zone .claim + .claim { margin-top: 3px; }
+
+
+/* Live feed sits beside the permissions now. */
+
+.activity-title { margin-top: 18px; }
+.activity { min-height: 24px; }
+
+@media (min-width: 860px) {
+  .toggles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .holder .agents { padding-top: 10px; }
+  .editor { padding-top: 12px; }
+}
+
+/* With two rows, the stamps stay beside their labels on a phone too. */
+@media (max-width: 480px) {
+  .row { flex-wrap: nowrap; }
+  .row-text { flex: 1 1 auto; }
+}

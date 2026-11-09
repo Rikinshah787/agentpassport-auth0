@@ -1,0 +1,9 @@
+{% for item in activity %}
+  <li>
+    <time>{{ item.time }}</time>
+    <span class="activity-who"><b>{{ item.agent }}</b> {{ item.action }}</span>
+    <span class="activity-code {{ 'activity-ok' if item.code < 300 else 'activity-no' }}">{{ item.code }}</span>
+  </li>
+{% else %}
+  <li class="activity-empty">Waiting for an agent to call a tool.</li>
+{% endfor %}

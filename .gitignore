@@ -1,0 +1,27 @@
+# Secrets and local state: never commit these
+.env
+.env.*
+!.env.example
+passports.json
+.mcp.json
+*.passport-backup
+*.tmp
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+mcp/node_modules/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+
+# Tooling
+.gstack/
+.claude/

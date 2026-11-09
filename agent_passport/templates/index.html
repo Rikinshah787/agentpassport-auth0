@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Passport</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='passport.css') }}">
+</head>
+<body{% if result %} class="quiet"{% endif %}>
+{% set labels = {"allowed": "Allowed", "blocked": "Blocked"} %}
+{% set states = card.values() | sum(start=[]) | map(attribute=2) | list %}
+{% set stamp_count = namespace(n=0) %}
+
+{% macro icon(state) %}
+  <svg class="stamp-icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    {% if state == "allowed" %}<path d="M3 8.5 6.5 12 13 4.5"/>{% else %}<path d="M4 4l8 8M12 4l-8 8"/>{% endif %}
+  </svg>
+{% endmacro %}
+
+<main class="passport">
+
+  <header class="holder">
+    <div class="masthead">
+      <svg class="seal" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor">
+        <circle cx="24" cy="24" r="22.5" stroke-width="1.5"/>
+        <circle cx="24" cy="24" r="19" stroke-width=".75"/>
+        <rect x="14.5" y="18" width="19" height="15" rx="4" stroke-width="1.75"/>
+        <path d="M24 18v-4.5" stroke-width="1.75" stroke-linecap="round"/>
+        <circle cx="24" cy="12" r="1.6" fill="currentColor" stroke="none"/>
+        <circle cx="20" cy="25" r="1.9" fill="currentColor" stroke="none"/>
+        <circle cx="28" cy="25" r="1.9" fill="currentColor" stroke="none"/>
+      </svg>
+      <div>
+        <h1>Agent Passport</h1>
+        <p class="powered">Powered by Auth0</p>
+      </div>
+    </div>
+
+    <ol class="steps">
+      <li class="step {{ 'done' if user else 'active' }}">
+        <span class="step-mark" aria-hidden="true">{{ "✓" if user else "1" }}</span>
+        <div class="step-body">
+          <b>Log in</b>
+          {% if user %}
+            <span class="step-note">{{ user.email or user.name or user.sub }}</span>
+          {% else %}
+            <form action="/login" method="get">
+              {% for scope in grantable %}<input type="hidden" name="scope" value="{{ scope }}">{% endfor %}
+              <button class="btn btn-primary" type="submit">Log in with Auth0</button>
+            </form>
+          {% endif %}
+        </div>
+      </li>
+      <li class="step {{ 'done' if connected else ('active' if user else 'todo') }}">
+        <span class="step-mark" aria-hidden="true">{{ "✓" if connected else "2" }}</span>
+        <div class="step-body">
+          <b>Connect your apps</b>
+          <span class="chips">
+            {% for key, service in services.items() %}
+              {% if key in connected %}
+                <span class="chip chip-on">✓ {{ service.label }}</span>
+              {% elif user %}
+                <a class="chip chip-link" href="{{ url_for('connect', service=key) }}">Connect {{ service.label }}</a>
+              {% else %}
+                <span class="chip chip-off">{{ service.label }}</span>
+              {% endif %}
+            {% endfor %}
+          </span>
+        </div>
+      </li>
+      <li class="step {{ 'done' if agents else ('active' if user else 'todo') }}">
+        <span class="step-mark" aria-hidden="true">{{ "✓" if agents else "3" }}</span>
+        <div class="step-body">
+          <b>Issue passports</b>
+          {% if user %}
+            <form action="{{ url_for('issue_passports') }}" method="post">
+              <button class="btn {{ 'btn-issue' if agents else 'btn-primary' }}" type="submit">{{ "Scan for new agents" if agents else "Find local agents & issue passports" }}</button>
+            </form>
+          {% else %}
+            <span class="step-note">One click, for every agent on this machine</span>
+          {% endif %}
+        </div>
+      </li>
+    </ol>
+
+    {% if agents %}
+      <nav class="agents" aria-label="Agents">
+        {% for name in agents %}
+          <a href="{{ url_for('index', agent=name) }}"{% if name == agent %} aria-current="page"{% endif %}>
+            {% if running.get(name) %}<span class="dot" title="Running"></span><span class="sr-only">Running: </span>{% endif %}{{ name }}
+          </a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
+    {% if not user %}<p class="void" aria-hidden="true">Not issued</p>{% endif %}
+  </header>
+
+  <section class="clearances" aria-labelledby="clearances-title">
+    <div class="clearances-head">
+      <h2 id="clearances-title">{{ "What " ~ agent ~ " can do" if agent else "What your agents can do" }}</h2>
+      <ul class="tally">
+        <li class="tally-allowed"><b>{{ states.count("allowed") }}</b> Allowed</li>
+        <li class="tally-blocked"><b>{{ states.count("blocked") }}</b> Blocked</li>
+      </ul>
+    </div>
+
+    {% if result %}
+      <p class="result result-{{ 'ok' if code < 300 else 'no' }}" role="status">{{ result }}</p>
+    {% elif request.args.get("error") %}
+      <p class="notice notice-error" role="alert">That didn't finish, so nothing changed.{% if last_error %} <code>{{ last_error }}</code>{% endif %}</p>
+    {% elif request.args.get("connected") %}
+      <p class="notice" role="status">Account connected. Auth0 is holding its tokens in Token Vault.</p>
+    {% elif not user %}
+      <p class="notice" role="status">No passport issued yet. Every action stays blocked until you log in.</p>
+    {% elif not agents %}
+      <p class="notice" role="status">No passports yet. Use step 3 to find the agents on this machine.</p>
+    {% elif not usable %}
+      <p class="notice" role="status">{{ agent }} has no usable scopes, so every action is blocked.</p>
+    {% endif %}
+
+    {% for service, rows in card.items() %}
+      <h3>{{ service }}</h3>
+      <ul class="rows">
+        {% for label, scope, state in rows %}
+          <li class="row">
+            <span class="row-text">
+              <span class="row-label">{{ label }}</span>
+              <code class="row-scope">{{ scope }}</code>
+            </span>
+            <span class="stamp stamp-{{ state }}" style="--i: {{ stamp_count.n }}">{{ icon(state) }}{{ labels[state] }}</span>
+          </li>
+          {% set stamp_count.n = stamp_count.n + 1 %}
+        {% endfor %}
+      </ul>
+    {% endfor %}
+
+    {% if user %}
+      <h2 class="activity-title">Live agent activity</h2>
+      <ul class="activity" id="activity" aria-live="polite">{% include "activity.html" %}</ul>
+      <script>
+        const feed = document.getElementById("activity");
+        setInterval(async () => {
+          try { feed.innerHTML = await (await fetch("/activity")).text(); } catch {}
+        }, 1500);
+      </script>
+    {% endif %}
+  </section>
+
+  {% if user %}
+    <div class="editor">
+      {% if agent %}
+        <form action="{{ url_for('update_agent', agent=agent) }}" method="post">
+          <h2>{{ agent }}'s passport</h2>
+          <div class="toggles">
+            {% for scope in grantable %}
+              <label class="toggle">
+                <code>{{ scope }}</code>
+                <input type="checkbox" role="switch" name="scope" value="{{ scope }}"{% if scope in agents[agent] %} checked{% endif %}>
+              </label>
+            {% endfor %}
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Update passport</button>
+            <button class="btn btn-revoke" type="submit" formaction="{{ url_for('remove_agent', agent=agent) }}">Remove agent</button>
+            <a class="btn btn-revoke" href="/logout">Log out</a>
+          </div>
+        </form>
+      {% else %}
+        <div class="actions"><a class="btn btn-revoke" href="/logout">Log out</a></div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <footer class="zone">
+    {% if user %}
+      <p class="claim">
+        <span class="claim-label">Issued by</span><code>{{ issuer }}</code>
+        <span class="claim-label claim-next">Audience</span><code>{{ audience }}</code>
+        <span class="claim-label claim-next">Valid until</span><code>{{ expires }}</code>
+      </p>
+    {% endif %}
+    <p class="claim">
+      <span class="claim-label">Scope returned by Auth0</span>
+      {% if granted %}<code>{{ granted | join(" ") }}</code>{% else %}<span class="claim-empty">No token yet</span>{% endif %}
+    </p>
+    <div class="mrz" aria-hidden="true">
+      <div>{{ "P<AUTH0<" ~ (agent or "NO<AGENT") | upper | replace(" ", "<") ~ "<PASSPORT" ~ "<" * 120 }}</div>
+      <div>{{ (usable | join("<") | replace(":", "<") | upper if usable else ("NO<SCOPES" if user else "NOT<ISSUED")) ~ "<" * 120 }}</div>
+    </div>
+  </footer>
+
+</main>
+</body>
+</html>

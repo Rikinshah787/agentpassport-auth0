@@ -1,0 +1,17 @@
+{
+  "name": "agent-passport-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
+  },
+  "description": "MCP server that forwards agent tool calls to the Agent Passport panel",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}
