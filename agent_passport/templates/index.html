@@ -58,7 +58,10 @@
           <span class="chips">
             {% for key, service in services.items() %}
               {% if key in connected %}
-                <span class="chip chip-on">✓ {{ service.label }}</span>
+                <form class="chip chip-on" action="{{ url_for('disconnect', service=key) }}" method="post">
+                  ✓ {{ service.label }}
+                  <button class="chip-x" type="submit" title="Disconnect {{ service.label }}" aria-label="Disconnect {{ service.label }}">×</button>
+                </form>
               {% elif user %}
                 <a class="chip chip-link" href="{{ url_for('connect', service=key) }}">Connect {{ service.label }}</a>
               {% else %}
@@ -74,7 +77,7 @@
           <b>Issue passports</b>
           {% if user %}
             <form action="{{ url_for('issue_passports') }}" method="post">
-              <button class="btn {{ 'btn-issue' if agents else 'btn-primary' }}" type="submit">{{ "Scan for new agents" if agents else "Find local agents & issue passports" }}</button>
+              <button class="btn {{ 'btn-issue' if agents else 'btn-primary' }}" type="submit">{{ "Rescan for agents" if agents else "Find local agents & issue passports" }}</button>
             </form>
           {% else %}
             <span class="step-note">One click, for every agent on this machine</span>
@@ -111,6 +114,10 @@
       <p class="notice notice-error" role="alert">That didn't finish, so nothing changed.{% if last_error %} <code>{{ last_error }}</code>{% endif %}</p>
     {% elif request.args.get("connected") %}
       <p class="notice" role="status">Account connected. Auth0 is holding its tokens in Token Vault.</p>
+    {% elif request.args.get("disconnected") %}
+      <p class="notice" role="status">Account disconnected. Agents can no longer reach it, and Auth0 no longer holds its tokens.</p>
+    {% elif request.args.get("removed") %}
+      <p class="notice" role="status">Agent removed, and its old key no longer works. Use step 3 to add it back with a new passport.</p>
     {% elif not user %}
       <p class="notice" role="status">No passport issued yet. Every action stays blocked until you log in.</p>
     {% elif not agents %}

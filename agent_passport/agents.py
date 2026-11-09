@@ -120,7 +120,7 @@ def unwire(name):
 
 
 def issue():
-    """One click: find every known agent, give it a passport, wire it in."""
+    """One click: find every known agent, wire it in, and issue a passport to any without one."""
     store = load()
     issued, skipped = [], []
     for name, is_running in find().items():
@@ -129,8 +129,9 @@ def issue():
         except (OSError, ValueError) as error:
             skipped.append(f"{name} ({error})")
             continue
-        store.setdefault(name, {"key": secrets.token_hex(32), "scopes": list(DEFAULT_SCOPES)})
-        issued.append(f"{name} (running)" if is_running else name)
+        if name not in store:
+            store[name] = {"key": secrets.token_hex(32), "scopes": list(DEFAULT_SCOPES)}
+            issued.append(f"{name} (running)" if is_running else name)
     save(store)
     return issued, skipped
 

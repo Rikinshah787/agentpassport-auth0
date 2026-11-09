@@ -100,7 +100,11 @@ def fake(monkeypatch):
         return SimpleNamespace(app_state=None, connection=fake_auth0.pending.connection)
 
     async def list_accounts(connection=None, from_param=None, take=None, store_options=None):
-        return SimpleNamespace(accounts=[SimpleNamespace(connection=name) for name in fake_auth0.connected])
+        names = [name for name in fake_auth0.connected if connection in (None, name)]
+        return SimpleNamespace(accounts=[SimpleNamespace(connection=name, id=f"account-{name}") for name in names])
+
+    async def delete_account(access_token, connected_account_id):
+        fake_auth0.connected.discard(connected_account_id.replace("account-", "", 1))
 
     async def token_for_connection(options):
         if options["connection"] not in fake_auth0.connected:
@@ -114,6 +118,7 @@ def fake(monkeypatch):
     monkeypatch.setattr(auth0, "list_connected_accounts", list_accounts)
     monkeypatch.setattr(auth0._my_account_client, "connect_account", connect_account)
     monkeypatch.setattr(auth0._my_account_client, "complete_connect_account", complete_connect)
+    monkeypatch.setattr(auth0._my_account_client, "delete_connected_account", delete_account)
     monkeypatch.setattr(app_module.verifier.options, "custom_fetch", verifier_fetch)
     monkeypatch.setattr(app_module.httpx, "get", fake_auth0.http_get)
     return fake_auth0

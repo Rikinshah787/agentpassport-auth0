@@ -62,3 +62,8 @@ auth0 = ServerClient(
         'audience': os.getenv('AUTH0_AUDIENCE', '')  # Optional: for API access
     }
 )
+
+# Flask runs each async request on its own event loop, but the SDK keeps one shared
+# HTTP client. Reusing a connection from a finished loop fails every second login with
+# "Event loop is closed", so this client never keeps connections open.
+auth0._oauth.headers["Connection"] = "close"

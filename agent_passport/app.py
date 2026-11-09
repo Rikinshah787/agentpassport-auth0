@@ -37,10 +37,14 @@ TOOLS = {
     "gmail_list_messages": "Read inbox",
 }
 
-# The apps connected through Token Vault. Each is one Auth0 connection.
+# The apps connected through Token Vault. Each uses one Auth0 connection.
 SERVICES = {
-    "github": {"label": "GitHub", "scopes": None},
-    "gmail": {"label": "Gmail", "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]},
+    "github": {"label": "GitHub", "connection": "github", "scopes": None},
+    "gmail": {
+        "label": "Gmail",
+        "connection": "google-oauth2",
+        "scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+    },
 }
 
 ACTIVITY = deque(maxlen=6)
@@ -65,9 +69,14 @@ def api_token(session):
 
 async def vault_token(service):
     # Auth0's Token Vault hands us the app's token. It never goes to the agent.
-    token = await auth0.get_access_token_for_connection({"connection": service}, g.store_options)
+    connection = SERVICES[service]["connection"]
+    token = await auth0.get_access_token_for_connection({"connection": connection}, g.store_options)
     CONNECTED["services"].add(service)
     return token
+
+
+def services_for(connections):
+    return {service for service, info in SERVICES.items() if info["connection"] in connections}
 
 
 async def refresh_connected():
@@ -77,7 +86,7 @@ async def refresh_connected():
     CONNECTED["checked"] = True
     try:
         response = await auth0.list_connected_accounts(store_options=g.store_options)
-        CONNECTED["services"] = {account.connection for account in response.accounts}
+        CONNECTED["services"] = services_for({account.connection for account in response.accounts})
     except Exception as error:
         remember("Checking connected apps failed", error)
 
@@ -216,7 +225,10 @@ async def issue_passports():
     if not session:
         return redirect("/")
     issued, skipped = passports.issue()
-    message = f"Passports issued to: {', '.join(issued) or 'no agents found'}. Restart each app to load its passport."
+    if issued:
+        message = f"Passports issued to: {', '.join(issued)}. Restart each app to load its passport."
+    else:
+        message = "Rescan found no agents without a passport."
     if skipped:
         message += f" Skipped: {', '.join(skipped)}."
     return show_card(session, next(iter(passports.scopes()), None), message, 200)
@@ -237,7 +249,7 @@ async def remove_agent(agent):
     if not await auth0.get_session(g.store_options):
         return redirect("/")
     passports.remove(agent)
-    return redirect("/")
+    return redirect(url_for("index", removed=1))
 
 
 @app.route("/api/tools/<tool>", methods=["POST"])
@@ -275,8 +287,9 @@ async def login():
     allowed = [scope for scope in wanted if scope in GRANTABLE]
 
     # offline_access gets a refresh token, which Token Vault needs.
+    # prompt=login means a logged-out user is asked to sign in again, not let straight back in.
     options = StartInteractiveLoginOptions(
-        authorization_params={"scope": " ".join(["offline_access"] + allowed)}
+        authorization_params={"scope": " ".join(["offline_access"] + allowed), "prompt": "login"}
     )
     url = await auth0.start_interactive_login(options, g.store_options)
     return redirect(url)
@@ -287,7 +300,7 @@ async def connect(service):
     if service not in SERVICES:
         abort(404)
     try:
-        options = ConnectAccountOptions(connection=service, scopes=SERVICES[service]["scopes"])
+        options = ConnectAccountOptions(connection=SERVICES[service]["connection"], scopes=SERVICES[service]["scopes"])
         url = await auth0.start_connect_account(options, g.store_options)
     except Exception as error:
         remember(f"Connect {service} failed", error)
@@ -300,7 +313,7 @@ async def callback():
     try:
         if "connect_code" in request.args:
             response = await auth0.complete_connect_account(str(request.url), g.store_options)
-            CONNECTED["services"].add(response.connection)
+            CONNECTED["services"] |= services_for({response.connection})
             return redirect("/?connected=1")
         await auth0.complete_interactive_login(str(request.url), g.store_options)
         CONNECTED["checked"] = False
@@ -310,9 +323,41 @@ async def callback():
     return redirect("/")
 
 
+async def forget_app_token(connection):
+    # The SDK keeps a copy of the app token in the session. Drop it, or it would keep working.
+    state = await auth0._state_store.get(auth0._state_identifier, g.store_options)
+    if not state:
+        return
+    state = state.dict() if hasattr(state, "dict") else state
+    tokens = state.get("connection_token_sets", [])
+    state["connection_token_sets"] = [token for token in tokens if token.get("connection") != connection]
+    await auth0._state_store.set(auth0._state_identifier, state, options=g.store_options)
+
+
+@app.route("/disconnect/<service>", methods=["POST"])
+async def disconnect(service):
+    if service not in SERVICES:
+        abort(404)
+    connection = SERVICES[service]["connection"]
+    try:
+        response = await auth0.list_connected_accounts(connection=connection, store_options=g.store_options)
+        for account in response.accounts:
+            await auth0.delete_connected_account(account.id, store_options=g.store_options)
+    except Exception as error:
+        remember(f"Disconnect {service} failed", error)
+        return redirect("/?error=disconnect")
+    await forget_app_token(connection)
+    CONNECTED["services"].discard(service)
+    return redirect("/?disconnected=1")
+
+
 @app.route("/logout")
 async def logout():
+    # Clears this app's session here and Auth0's session on the redirect. Connected apps stay
+    # in Token Vault until disconnected, and Google's own sign-in isn't ours to clear.
     options = LogoutOptions(return_to=url_for("index", _external=True))
     url = await auth0.logout(options, g.store_options)
+    CONNECTED.update(checked=False, services=set())
+    ACTIVITY.clear()
     return redirect(url)
 

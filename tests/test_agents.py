@@ -81,3 +81,26 @@ def test_a_removed_agent_has_no_key(home):
     assert agents.agent_for_key(key) == "Codex"
     agents.remove("Codex")
     assert agents.agent_for_key(key) is None
+
+
+def test_rescan_adds_a_removed_agent_back_with_a_fresh_passport(home):
+    agents.issue()
+    agents.set_scopes("Codex", ["github:read", "gmail:read"])
+    old_key = agents.load()["Codex"]["key"]
+    agents.remove("Codex")
+
+    issued, skipped = agents.issue()
+
+    passport = agents.load()["Codex"]
+    assert issued == ["Codex"] and skipped == []
+    assert passport["scopes"] == agents.DEFAULT_SCOPES
+    assert agents.agent_for_key(passport["key"]) == "Codex" and agents.agent_for_key(old_key) is None
+    assert agents.MCP_NAME in home.codex.read_text()
+
+
+def test_rescan_reports_only_what_it_added_and_keeps_existing_passports(home):
+    agents.issue()
+    agents.set_scopes("Codex", [])
+    issued, skipped = agents.issue()
+    assert issued == [] and skipped == []
+    assert agents.load()["Codex"]["scopes"] == []

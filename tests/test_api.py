@@ -107,6 +107,13 @@ def test_gmail_returns_sender_and_subject_only(agent, call, connect):
     assert "BODY-MUST-NOT-LEAK" not in text and "DROP-ME" not in text
 
 
+def test_gmail_uses_the_google_connection_and_shows_as_gmail(client, agent, connect, fake):
+    connect("gmail")
+    assert fake.pending.connection == "google-oauth2"
+    assert fake.pending.scopes == ["https://www.googleapis.com/auth/gmail.readonly"]
+    assert "✓ Gmail" in client.get("/").get_data(as_text=True)
+
+
 def test_login_requests_a_refresh_token_and_only_known_scopes(login):
     params = login("github:read admin:everything")
     scope = params["scope"][0].split()
@@ -130,7 +137,79 @@ def test_panel_shows_each_setup_stage(client, home, login, connect):
     connect("github")
     assert "✓ GitHub" in client.get("/").get_data(as_text=True)
     client.post("/agents/issue")
-    assert b"Scan for new agents" in client.get("/").data
+    assert b"Rescan for agents" in client.get("/").data
+
+
+def test_removing_an_agent_explains_how_to_add_it_back(client, home, login):
+    login()
+    agents.issue()
+    response = client.post("/agents/Codex/remove")
+    assert "Codex" not in agents.load()
+    assert b"Use step 3 to add it back" in client.get(response.headers["Location"]).data
+
+
+def test_rescan_adds_back_only_the_removed_agent_and_says_so(client, home, login):
+    login()
+    agents.issue()
+    client.post("/agents/Codex/remove")
+    page = client.post("/agents/issue").get_data(as_text=True)
+    assert "Passports issued to: Codex." in page and "Claude Desktop." not in page
+    assert "Codex" in agents.load()
+
+
+def test_rescan_with_nothing_missing_says_so(client, home, login):
+    login()
+    agents.issue()
+    keys = {name: passport["key"] for name, passport in agents.load().items()}
+    page = client.post("/agents/issue").get_data(as_text=True)
+    assert "no agents without a passport" in page
+    assert {name: passport["key"] for name, passport in agents.load().items()} == keys
+
+
+def test_rescan_needs_a_login(client, home):
+    response = client.post("/agents/issue")
+    assert response.status_code == 302 and not agents.STORE.exists()
+
+
+def test_disconnect_removes_the_account_and_the_cached_token(agent, call, client, fake):
+    assert call(REPOS, agent).status_code == 200  # the SDK now holds a copy of the app token
+    response = client.post("/disconnect/github")
+    assert response.headers["Location"].endswith("disconnected=1")
+    assert "github" not in fake.connected
+    before = len(fake.app_calls)
+    assert call(REPOS, agent).status_code == 502
+    assert len(fake.app_calls) == before
+    assert "✓ GitHub" not in client.get("/").get_data(as_text=True)
+
+
+def test_disconnect_leaves_the_other_app_alone(agent, connect, client, fake):
+    connect("gmail")
+    client.post("/disconnect/github")
+    assert fake.connected == {"google-oauth2"}
+    assert "✓ Gmail" in client.get("/").get_data(as_text=True)
+
+
+def test_another_website_cannot_disconnect_an_app(agent, client, fake):
+    assert client.post("/disconnect/github", headers={"Origin": "https://evil.example"}).status_code == 403
+    assert "github" in fake.connected
+
+
+def test_unknown_app_cannot_be_disconnected(client):
+    assert client.post("/disconnect/slack").status_code == 404
+
+
+def test_login_asks_a_logged_out_user_to_sign_in_again(login):
+    assert login()["prompt"] == ["login"]
+
+
+def test_logout_clears_the_session_but_keeps_connected_apps(agent, call, client, fake):
+    call(REPOS, agent)
+    client.get("/logout")
+    assert call(REPOS, agent).status_code == 401
+    page = client.get("/").get_data(as_text=True)
+    assert "Log in with Auth0" in page and "Read repos" in page
+    assert "<time>" not in client.get("/activity").get_data(as_text=True)
+    assert "github" in fake.connected
 
 
 def test_panel_never_shows_agent_keys(client, home, login):
